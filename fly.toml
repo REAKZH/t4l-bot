@@ -8,7 +8,32 @@ primary_region = 'fra'
 
 [build]
 
+[env]
+  NODE_ENV = 'production'
+
+[[services]]
+  protocol = 'tcp'
+  internal_port = 8080
+
+  [[services.processes]]
+    name = "app"
+    
+    # Auto-Restart bei Crashes
+    [services.processes.auto_stop_machines]
+      enabled = false
+    
+    [services.processes.auto_start_machines]
+      enabled = true
+    
+    [services.processes.min_machines_running]
+      value = 1
+
+[mounts]
+
 [[vm]]
   memory = '256mb'
   cpu_kind = 'shared'
   cpus = 1
+
+# Health Checks deaktiviert (Discord Bot braucht keine HTTP)
+[checks]

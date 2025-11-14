@@ -465,6 +465,18 @@ client.login(process.env.DISCORD_TOKEN)
         process.exit(1);
     });
 
+// Verbesserte Fehlerbehandlung
+process.on('unhandledRejection', (error) => {
+    console.error('❌ Unhandled Promise Rejection:', error);
+    // Bot läuft weiter, crasht nicht
+});
+
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    // Neustart bei kritischem Fehler
+    process.exit(1);
+});
+
 // Graceful Shutdown
 process.on('SIGINT', () => {
     console.log('\n⏹️ Bot wird heruntergefahren...');
