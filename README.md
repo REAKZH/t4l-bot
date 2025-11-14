@@ -1,13 +1,13 @@
-# Discord Bot für Render.com
+# Discord Bot für Fly.io
 
-Ein einfacher Discord Bot, der auf Render.com gehostet werden kann.
+Ein einfacher Discord Bot, der kostenlos auf Fly.io gehostet werden kann.
 
 ## 📋 Voraussetzungen
 
 - Ein Discord Account
-- Ein GitHub Account
-- Ein Render.com Account (kostenlos)
-- Node.js 18+ (für lokale Entwicklung)
+- Ein Fly.io Account (kostenlos)
+- Git installiert (https://git-scm.com/download/win)
+- Node.js 18+ (für lokale Entwicklung, optional)
 
 ## 🚀 Schritt-für-Schritt Anleitung
 
@@ -40,55 +40,63 @@ Ein einfacher Discord Bot, der auf Render.com gehostet werden kann.
 5. Öffne die URL in deinem Browser
 6. Wähle deinen Server aus und klicke auf **"Autorisieren"**
 
-### 3. Code zu GitHub hochladen
+### 3. Fly.io CLI installieren
 
-1. Erstelle ein neues Repository auf [GitHub](https://github.com/new)
-2. Öffne ein Terminal in diesem Ordner und führe folgende Befehle aus:
+1. Öffne PowerShell als Administrator
+2. Installiere Fly.io CLI:
+   ```powershell
+   iwr https://fly.io/install.ps1 -useb | iex
+   ```
+3. Schließe PowerShell und öffne es neu
+4. Teste die Installation:
+   ```powershell
+   fly version
+   ```
 
-```bash
-git init
-git add .
-git commit -m "Initial commit: Discord Bot"
-git branch -M main
-git remote add origin https://github.com/DEIN_USERNAME/DEIN_REPO.git
-git push -u origin main
-```
+### 4. Bei Fly.io anmelden
 
-### 4. Auf Render.com deployen
+1. Erstelle einen Account auf [Fly.io](https://fly.io/app/sign-up)
+2. Melde dich in der CLI an:
+   ```powershell
+   fly auth login
+   ```
+3. Dein Browser öffnet sich - logge dich ein
 
-#### Option A: Automatisches Deployment mit render.yaml
+### 5. Bot auf Fly.io deployen
 
-1. Gehe zu [Render.com](https://render.com) und erstelle einen Account (oder logge dich ein)
-2. Klicke auf **"New +"** → **"Blueprint"**
-3. Verbinde dein GitHub Repository
-4. Render erkennt automatisch die `render.yaml` Datei
-5. Klicke auf **"Apply"**
+1. Navigiere in deinem Terminal zum Bot-Ordner:
+   ```powershell
+   cd "D:\Documents\GitHub\t4l-bot"
+   ```
 
-#### Option B: Manuelles Deployment
+2. Erstelle eine neue Fly.io App:
+   ```powershell
+   fly launch
+   ```
+   - Wähle einen App-Namen (z.B. `mein-discord-bot-123`)
+   - Region: **Amsterdam (ams)** empfohlen für Europa
+   - Bei "Would you like to set up a PostgreSQL database?": **Nein (n)**
+   - Bei "Would you like to set up an Upstash Redis database?": **Nein (n)**
+   - Bei "Would you like to deploy now?": **Nein (n)** - wir müssen erst den Token setzen!
 
-1. Gehe zu [Render.com](https://render.com) und erstelle einen Account (oder logge dich ein)
-2. Klicke auf **"New +"** → **"Background Worker"** (nicht Web Service!)
-3. Verbinde dein GitHub Repository
-4. Konfiguration:
-   - **Name:** `t4l-bot` (oder ein anderer Name)
-   - **Environment:** `Node`
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-   - **Plan:** Wähle **"Free"**
+3. Setze den Discord Token als Secret:
+   ```powershell
+   fly secrets set DISCORD_TOKEN="DEIN_BOT_TOKEN_HIER"
+   ```
+   ⚠️ Ersetze `DEIN_BOT_TOKEN_HIER` mit deinem echten Token!
 
-### 5. Umgebungsvariablen hinzufügen
-
-1. Scrolle nach unten zu **"Environment Variables"**
-2. Klicke auf **"Add Environment Variable"**
-3. Füge folgende Variable hinzu:
-   - **Key:** `DISCORD_TOKEN`
-   - **Value:** Dein Discord Bot Token (den du in Schritt 1 kopiert hast)
-4. Klicke auf **"Create Background Worker"** oder **"Save Changes"**
+4. Jetzt deployen:
+   ```powershell
+   fly deploy
+   ```
 
 ### 6. Bot überprüfen
 
-1. Warte, bis das Deployment abgeschlossen ist (ca. 2-5 Minuten)
-2. Klicke auf **"Logs"**, um zu sehen, ob der Bot erfolgreich gestartet ist
+1. Warte, bis das Deployment abgeschlossen ist (ca. 1-3 Minuten)
+2. Überprüfe die Logs:
+   ```powershell
+   fly logs
+   ```
 3. Du solltest folgende Meldung sehen:
    ```
    ✅ Bot ist online als DEIN_BOT_NAME#1234
@@ -98,12 +106,35 @@ git push -u origin main
 
 ## 🔄 Updates deployen
 
-Jedes Mal, wenn du Änderungen zu GitHub pushst, wird Render automatisch ein neues Deployment starten:
+Wenn du Änderungen am Bot machst, deploye einfach neu:
 
-```bash
-git add .
-git commit -m "Deine Änderung"
-git push
+```powershell
+fly deploy
+```
+
+## 📊 Nützliche Fly.io Befehle
+
+```powershell
+# Logs anzeigen
+fly logs
+
+# Bot-Status prüfen
+fly status
+
+# SSH-Zugang zur App (für Debugging)
+fly ssh console
+
+# App stoppen
+fly scale count 0
+
+# App starten
+fly scale count 1
+
+# Secrets anzeigen (nicht die Werte!)
+fly secrets list
+
+# App löschen
+fly apps destroy DEIN_APP_NAME
 ```
 
 ## 📝 Bot erweitern
@@ -143,19 +174,22 @@ client.on('messageCreate', message => {
    npm start
    ```
 
-## 📊 Wichtige Hinweise zu Render.com (Free Tier)
+## � Kosten und Limits (Fly.io Free Tier)
 
-- ⚠️ **Background Worker werden nach 15 Minuten Inaktivität heruntergefahren**
-- Um deinen Bot 24/7 online zu halten, benötigst du einen bezahlten Plan ($7/Monat)
-- Alternative: Verwende einen "Web Service" und implementiere einen einfachen HTTP-Server
+- ✅ **Komplett kostenlos** für kleine Bots
+- Inklusive: 3 VMs mit je 256MB RAM
+- Dein Bot läuft 24/7 ohne Abschaltung
+- Mehr als genug für einen einfachen Discord Bot
+- Keine Kreditkarte erforderlich (aber empfohlen für bessere Limits)
 
 ## 🔧 Troubleshooting
 
 ### Bot geht offline
 
-- Überprüfe die Logs auf Render.com
-- Stelle sicher, dass der Discord Token korrekt eingetragen ist
-- Prüfe, ob alle Intents im Discord Developer Portal aktiviert sind
+- Überprüfe die Logs mit `fly logs`
+- Stelle sicher, dass der Discord Token korrekt gesetzt ist: `fly secrets list`
+- Prüfe den App-Status: `fly status`
+- Stelle sicher, dass alle Intents im Discord Developer Portal aktiviert sind
 
 ### Bot kann keine Nachrichten lesen
 
@@ -164,14 +198,45 @@ client.on('messageCreate', message => {
 
 ### Deployment schlägt fehl
 
-- Überprüfe, ob `package.json` korrekt ist
-- Stelle sicher, dass Node.js Version 18+ in der `package.json` angegeben ist
+- Überprüfe, ob der `Dockerfile` korrekt ist
+- Stelle sicher, dass die `fly.toml` existiert
+- Probiere: `fly deploy --verbose` für detaillierte Fehlerinfos
+
+### "Error: git is not installed"
+
+- Installiere Git: https://git-scm.com/download/win
+- Starte VS Code/Terminal neu nach der Installation
 
 ## 📚 Weitere Ressourcen
 
 - [Discord.js Guide](https://discordjs.guide/)
 - [Discord.js Dokumentation](https://discord.js.org/)
-- [Render.com Dokumentation](https://render.com/docs)
+- [Fly.io Dokumentation](https://fly.io/docs)
+- [Fly.io Discord Bot Guide](https://fly.io/docs/app-guides/discord-bot/)
+
+## ⚡ Schnellstart-Zusammenfassung
+
+```powershell
+# 1. Git installieren (falls noch nicht geschehen)
+# Download: https://git-scm.com/download/win
+
+# 2. Fly.io CLI installieren
+iwr https://fly.io/install.ps1 -useb | iex
+
+# 3. Bei Fly.io anmelden
+fly auth login
+
+# 4. Zum Projekt-Ordner navigieren
+cd "D:\Documents\GitHub\t4l-bot"
+
+# 5. App erstellen und deployen
+fly launch
+fly secrets set DISCORD_TOKEN="DEIN_BOT_TOKEN"
+fly deploy
+
+# 6. Logs anschauen
+fly logs
+```
 
 ## 📄 Lizenz
 
