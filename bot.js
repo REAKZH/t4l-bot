@@ -11,6 +11,10 @@ const client = new Client({
 // Speicher für aktive Fights (messageId -> fight data)
 const activeFights = new Map();
 
+// Channel IDs
+const FIGHT_CHANNEL_ID = '1438245823707353171';
+const CAMPER_CHANNEL_ID = '1438896012155420682';
+
 // Definiere Slash Commands
 const commands = [
     new SlashCommandBuilder()
@@ -91,9 +95,9 @@ client.on('interactionCreate', async interaction => {
     
     if (commandName === 'fight') {
         // Prüfe ob der Command im richtigen Channel ist
-        if (interaction.channel.name !== 'fight-liste') {
+        if (interaction.channelId !== FIGHT_CHANNEL_ID) {
             return await interaction.reply({
-                content: '❌ Dieser Command kann nur im Channel **#fight-liste** verwendet werden!',
+                content: `❌ Dieser Command kann nur in <#${FIGHT_CHANNEL_ID}> verwendet werden!`,
                 ephemeral: true
             });
         }
@@ -137,9 +141,9 @@ client.on('interactionCreate', async interaction => {
     
     else if (commandName === 'add') {
         // Prüfe ob der Command im richtigen Channel ist
-        if (interaction.channel.name !== 'fight-liste') {
+        if (interaction.channelId !== FIGHT_CHANNEL_ID) {
             return await interaction.reply({
-                content: '❌ Dieser Command kann nur im Channel **#fight-liste** verwendet werden!',
+                content: `❌ Dieser Command kann nur in <#${FIGHT_CHANNEL_ID}> verwendet werden!`,
                 ephemeral: true
             });
         }
@@ -195,9 +199,9 @@ client.on('interactionCreate', async interaction => {
     
     else if (commandName === 'remove') {
         // Prüfe ob der Command im richtigen Channel ist
-        if (interaction.channel.name !== 'fight-liste') {
+        if (interaction.channelId !== FIGHT_CHANNEL_ID) {
             return await interaction.reply({
-                content: '❌ Dieser Command kann nur im Channel **#fight-liste** verwendet werden!',
+                content: `❌ Dieser Command kann nur in <#${FIGHT_CHANNEL_ID}> verwendet werden!`,
                 ephemeral: true
             });
         }
@@ -246,9 +250,9 @@ client.on('interactionCreate', async interaction => {
     
     else if (commandName === 'camper') {
         // Prüfe ob der Command im richtigen Channel ist
-        if (interaction.channel.name !== 'camper') {
+        if (interaction.channelId !== CAMPER_CHANNEL_ID) {
             return await interaction.reply({
-                content: '❌ Dieser Command kann nur im Channel **#camper** verwendet werden!',
+                content: `❌ Dieser Command kann nur in <#${CAMPER_CHANNEL_ID}> verwendet werden!`,
                 ephemeral: true
             });
         }
@@ -281,10 +285,9 @@ client.on('interactionCreate', async interaction => {
             } catch (error) {
                 console.error(`❌ Konnte keine DM an ${interaction.user.tag} senden, versuche #camper Channel...`);
                 
-                // Falls DM fehlschlägt, suche nach #camper Channel
+                // Falls DM fehlschlägt, sende in #camper Channel
                 try {
-                    const guild = interaction.guild;
-                    const camperChannel = guild.channels.cache.find(ch => ch.name === 'camper');
+                    const camperChannel = await client.channels.fetch(CAMPER_CHANNEL_ID);
                     
                     if (camperChannel) {
                         await camperChannel.send({
@@ -298,8 +301,6 @@ client.on('interactionCreate', async interaction => {
                             }]
                         });
                         console.log(`✅ Camper-Nachricht in #camper gesendet für ${interaction.user.tag}`);
-                    } else {
-                        console.error('❌ #camper Channel nicht gefunden!');
                     }
                 } catch (channelError) {
                     console.error('❌ Fehler beim Senden im #camper Channel:', channelError);
