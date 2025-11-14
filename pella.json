@@ -1,0 +1,13 @@
+{
+  "name": "t4l-bot",
+  "runtime": "nodejs",
+  "start": "node bot.js",
+  "build": "npm install",
+  "environment": {
+    "NODE_ENV": "production"
+  },
+  "resources": {
+    "memory": "256MB",
+    "cpu": "0.5"
+  }
+}

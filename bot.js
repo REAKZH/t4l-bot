@@ -1,11 +1,17 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, MessageFlags } = require('discord.js');
 require('dotenv').config();
 
-// Erstelle einen neuen Discord Client
+// Erstelle einen neuen Discord Client mit Keep-Alive
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
-    ]
+    ],
+    // WebSocket Keep-Alive Einstellungen
+    ws: {
+        properties: {
+            browser: 'Discord Client'
+        }
+    }
 });
 
 // Speicher für aktive Fights (messageId -> fight data)
@@ -101,11 +107,27 @@ client.once('ready', async () => {
 // Event: Fehlerbehandlung
 client.on('error', error => {
     console.error('❌ Discord Client Error:', error);
+    // Bot läuft weiter, crasht nicht
 });
 
 // Event: Warnung
 client.on('warn', info => {
     console.warn('⚠️ Discord Client Warning:', info);
+});
+
+// Event: Disconnect - Auto Reconnect
+client.on('disconnect', () => {
+    console.warn('⚠️ Bot wurde disconnected, versuche Reconnect...');
+});
+
+// Event: Reconnecting
+client.on('reconnecting', () => {
+    console.log('🔄 Bot versucht sich neu zu verbinden...');
+});
+
+// Event: Resume
+client.on('resume', () => {
+    console.log('✅ Bot-Session wiederhergestellt');
 });
 
 // Event: Slash Command Interaktion
@@ -121,7 +143,7 @@ client.on('interactionCreate', async interaction => {
         if (interaction.channelId !== FIGHT_CHANNEL_ID) {
             return await interaction.reply({
                 content: `❌ Dieser Command kann nur in <#${FIGHT_CHANNEL_ID}> verwendet werden!`,
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
         
@@ -157,8 +179,9 @@ client.on('interactionCreate', async interaction => {
                 footer: { text: 'Nutze /fight add @user zum Hinzufügen' }
             };
             
-            const message = await interaction.reply({ embeds: [embed], fetchReply: true });
-            activeFights.set(message.id, fightData);
+            const message = await interaction.reply({ embeds: [embed] });
+            const fetchedMessage = await interaction.fetchReply();
+            activeFights.set(fetchedMessage.id, fightData);
             
             console.log(`✅ Fight erstellt von ${interaction.user.tag} mit ${slots} Slots`);
         }
@@ -171,17 +194,37 @@ client.on('interactionCreate', async interaction => {
             let targetFight = null;
             let targetMessageId = null;
             
+            // Debug: Zeige alle aktiven Fights
+            console.log(`🔍 Suche Fight in Channel ${channelId}`);
+            console.log(`📊 Aktive Fights: ${activeFights.size}`);
+            
             for (const [messageId, fightData] of activeFights.entries()) {
+                console.log(`  - Fight Message ID: ${messageId}, Channel: ${fightData.channelId}`);
                 if (fightData.channelId === channelId) {
                     targetFight = fightData;
                     targetMessageId = messageId;
+                    console.log(`✅ Fight gefunden!`);
                 }
             }
             
             if (!targetFight) {
+                console.log(`❌ Kein Fight gefunden für Channel ${channelId}`);
                 return await interaction.reply({ 
-                    content: '❌ Kein aktiver Fight in diesem Channel gefunden!', 
-                    ephemeral: true 
+                    content: `❌ Kein aktiver Fight in diesem Channel gefunden! Bitte erstelle einen neuen Fight mit \`/fight create\`.`, 
+                    flags: MessageFlags.Ephemeral 
+                });
+            }
+            
+            // Prüfe ob die Nachricht noch existiert
+            try {
+                await interaction.channel.messages.fetch(targetMessageId);
+            } catch (error) {
+                // Nachricht wurde gelöscht
+                activeFights.delete(targetMessageId);
+                console.log(`🗑️ Fight-Nachricht ${targetMessageId} wurde gelöscht, entferne aus Cache`);
+                return await interaction.reply({
+                    content: '❌ Kein aktiver Fight in diesem Channel gefunden! Bitte erstelle einen neuen Fight mit `/fight create`.',
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -189,7 +232,7 @@ client.on('interactionCreate', async interaction => {
             if (targetFight.participants.some(p => p.id === user.id)) {
                 return await interaction.reply({ 
                     content: `❌ ${user} ist bereits im Fight!`, 
-                    ephemeral: true 
+                    flags: MessageFlags.Ephemeral 
                 });
             }
             
@@ -197,7 +240,7 @@ client.on('interactionCreate', async interaction => {
             if (targetFight.participants.length >= targetFight.slots) {
                 return await interaction.reply({ 
                     content: '❌ Der Fight ist bereits voll!', 
-                    ephemeral: true 
+                    flags: MessageFlags.Ephemeral 
                 });
             }
             
@@ -209,7 +252,7 @@ client.on('interactionCreate', async interaction => {
             
             await interaction.reply({ 
                 content: `✅ ${user} wurde zum Fight hinzugefügt!`, 
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             });
         }
         
@@ -221,17 +264,37 @@ client.on('interactionCreate', async interaction => {
             let targetFight = null;
             let targetMessageId = null;
             
+            // Debug: Zeige alle aktiven Fights
+            console.log(`🔍 Suche Fight in Channel ${channelId}`);
+            console.log(`📊 Aktive Fights: ${activeFights.size}`);
+            
             for (const [messageId, fightData] of activeFights.entries()) {
+                console.log(`  - Fight Message ID: ${messageId}, Channel: ${fightData.channelId}`);
                 if (fightData.channelId === channelId) {
                     targetFight = fightData;
                     targetMessageId = messageId;
+                    console.log(`✅ Fight gefunden!`);
                 }
             }
             
             if (!targetFight) {
+                console.log(`❌ Kein Fight gefunden für Channel ${channelId}`);
                 return await interaction.reply({ 
-                    content: '❌ Kein aktiver Fight in diesem Channel gefunden!', 
-                    ephemeral: true 
+                    content: `❌ Kein aktiver Fight in diesem Channel gefunden!\n\nDebug Info:\n- Channel ID: ${channelId}\n- Aktive Fights: ${activeFights.size}`, 
+                    flags: MessageFlags.Ephemeral 
+                });
+            }
+            
+            // Prüfe ob die Nachricht noch existiert
+            try {
+                await interaction.channel.messages.fetch(targetMessageId);
+            } catch (error) {
+                // Nachricht wurde gelöscht
+                activeFights.delete(targetMessageId);
+                console.log(`🗑️ Fight-Nachricht ${targetMessageId} wurde gelöscht, entferne aus Cache`);
+                return await interaction.reply({
+                    content: '❌ Der Fight wurde gelöscht! Bitte erstelle einen neuen Fight mit `/fight create`.',
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -240,7 +303,7 @@ client.on('interactionCreate', async interaction => {
             if (userIndex === -1) {
                 return await interaction.reply({ 
                     content: `❌ ${user} ist nicht im Fight!`, 
-                    ephemeral: true 
+                    flags: MessageFlags.Ephemeral 
                 });
             }
             
@@ -252,7 +315,7 @@ client.on('interactionCreate', async interaction => {
             
             await interaction.reply({ 
                 content: `✅ ${user} wurde aus dem Fight entfernt!`, 
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             });
         }
     }
@@ -264,7 +327,7 @@ client.on('interactionCreate', async interaction => {
         if (interaction.channelId !== CAMPER_CHANNEL_ID) {
             return await interaction.reply({
                 content: `❌ Dieser Command kann nur in <#${CAMPER_CHANNEL_ID}> verwendet werden!`,
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
         
@@ -276,7 +339,7 @@ client.on('interactionCreate', async interaction => {
             if (activeCampers.has(userId)) {
                 return await interaction.reply({
                     content: '❌ Du hast bereits einen aktiven Timer! Nutze `/camper reset` um ihn abzubrechen.',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -294,14 +357,14 @@ client.on('interactionCreate', async interaction => {
             // Bestätige den Timer-Start
             await interaction.reply({ 
                 content: `⏰ Camper-Timer gestartet für **${minuten} Minute(n)**! Du bekommst eine DM, wenn die Zeit vorbei ist.\n\nNutze \`/camper info\` um die verbleibende Zeit zu sehen.`, 
-                ephemeral: true 
+                flags: MessageFlags.Ephemeral 
             });
             
             console.log(`⏰ Camper-Timer gestartet für ${interaction.user.tag}: ${minuten} Minuten`);
             
             // Starte den Timer
             const timeoutId = setTimeout(async () => {
-                // Entferne Timer aus Map
+                // *** WICHTIG: Entferne Timer aus Map SOFORT ***
                 activeCampers.delete(userId);
                 
                 try {
@@ -353,7 +416,7 @@ client.on('interactionCreate', async interaction => {
             if (!activeCampers.has(userId)) {
                 return await interaction.reply({
                     content: '❌ Du hast keinen aktiven Camper-Timer!',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -383,7 +446,7 @@ client.on('interactionCreate', async interaction => {
             
             await interaction.reply({
                 embeds: [embed],
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
         
@@ -393,7 +456,7 @@ client.on('interactionCreate', async interaction => {
             if (!activeCampers.has(userId)) {
                 return await interaction.reply({
                     content: '❌ Du hast keinen aktiven Camper-Timer!',
-                    ephemeral: true
+                    flags: MessageFlags.Ephemeral
                 });
             }
             
@@ -407,7 +470,7 @@ client.on('interactionCreate', async interaction => {
             
             await interaction.reply({
                 content: '✅ Dein Camper-Timer wurde erfolgreich abgebrochen!',
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
     }
@@ -464,6 +527,18 @@ client.login(process.env.DISCORD_TOKEN)
         console.error('❌ Fehler beim Login:', error);
         process.exit(1);
     });
+
+// Unhandled Promise Rejections abfangen (verhindert Crashes)
+process.on('unhandledRejection', (error) => {
+    console.error('❌ Unhandled Promise Rejection:', error);
+    // Bot läuft weiter statt zu crashen
+});
+
+// Uncaught Exceptions abfangen
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+    // Bei kritischen Fehlern: Log und continue (Fly.io startet neu wenn nötig)
+});
 
 // Graceful Shutdown
 process.on('SIGINT', () => {
