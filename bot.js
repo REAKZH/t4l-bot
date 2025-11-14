@@ -38,7 +38,11 @@ const commands = [
                         .setDescription('Anzahl der verfügbaren Slots')
                         .setRequired(true)
                         .setMinValue(1)
-                        .setMaxValue(22)))
+                        .setMaxValue(22))
+                .addStringOption(option =>
+                    option.setName('szenario')
+                        .setDescription('Das Szenario für den Fight')
+                        .setRequired(true)))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('add')
@@ -49,12 +53,13 @@ const commands = [
                         .setRequired(true))
                 .addStringOption(option =>
                     option.setName('role')
-                        .setDescription('Die Role des Users')
+                        .setDescription('Die Rolle des Users')
                         .setRequired(true)
                         .addChoices(
                             { name: 'Anti', value: 'Anti' },
                             { name: 'Freestyle', value: 'Freestyle' },
-                            { name: 'Masse', value: 'Masse' }
+                            { name: 'Masse', value: 'Masse' },
+                            { name: 'Heli', value: 'Heli' }
                         )))
         .addSubcommand(subcommand =>
             subcommand
@@ -158,11 +163,13 @@ client.on('interactionCreate', async interaction => {
         
         if (subcommand === 'create') {
             const slots = interaction.options.getInteger('slots');
+            const szenario = interaction.options.getString('szenario');
             
             // Erstelle Fight-Daten
             const fightData = {
                 creator: interaction.user.id,
                 slots: slots,
+                szenario: szenario,
                 participants: [],
                 channelId: interaction.channelId
             };
@@ -170,7 +177,7 @@ client.on('interactionCreate', async interaction => {
             // Erstelle Embed
             const embed = {
                 color: 0xff0000,
-                title: '⚔️ Fight erstellt!',
+                title: `⚔️ Fight (${szenario})`,
                 description: `Erstellt von: ${interaction.user}`,
                 fields: [
                     { 
@@ -192,7 +199,7 @@ client.on('interactionCreate', async interaction => {
             const fetchedMessage = await interaction.fetchReply();
             activeFights.set(fetchedMessage.id, fightData);
             
-            console.log(`✅ Fight erstellt von ${interaction.user.tag} mit ${slots} Slots`);
+            console.log(`✅ Fight erstellt von ${interaction.user.tag} mit ${slots} Slots - Szenario: ${szenario}`);
         }
         
         else if (subcommand === 'add') {
@@ -499,7 +506,8 @@ async function updateFightMessage(channel, messageId, fightData) {
             const roleGroups = {
                 'Masse': [],
                 'Anti': [],
-                'Freestyle': []
+                'Freestyle': [],
+                'Heli': []
             };
             
             fightData.participants.forEach(p => {
@@ -523,12 +531,16 @@ async function updateFightMessage(channel, messageId, fightData) {
                 sections.push(`**Freestyle:**\n${roleGroups['Freestyle'].map(p => `<@${p.id}>`).join('\n')}`);
             }
             
+            if (roleGroups['Heli'].length > 0) {
+                sections.push(`**Heli:**\n${roleGroups['Heli'].map(p => `<@${p.id}>`).join('\n')}`);
+            }
+            
             participantsList = sections.join('\n\n');
         }
         
         const embed = {
             color: fightData.participants.length >= fightData.slots ? 0x00ff00 : 0xff0000,
-            title: '⚔️ Fight',
+            title: `⚔️ Fight (${fightData.szenario})`,
             description: `Erstellt von: <@${creator.id}>`,
             fields: [
                 { 
