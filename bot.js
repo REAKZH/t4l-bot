@@ -519,6 +519,9 @@ client.on('messageCreate', message => {
 });
 
 // Login mit dem Bot Token
+console.log('🔍 Token geladen:', process.env.DISCORD_TOKEN ? 'Ja ✅' : 'Nein ❌');
+console.log('🔍 Token Länge:', process.env.DISCORD_TOKEN?.length || 0);
+
 client.login(process.env.DISCORD_TOKEN)
     .then(() => {
         console.log('🔐 Bot-Login erfolgreich');
