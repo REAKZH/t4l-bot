@@ -46,7 +46,16 @@ const commands = [
                 .addUserOption(option =>
                     option.setName('user')
                         .setDescription('Der User, der hinzugefügt werden soll')
-                        .setRequired(true)))
+                        .setRequired(true))
+                .addStringOption(option =>
+                    option.setName('role')
+                        .setDescription('Die Role des Users')
+                        .setRequired(true)
+                        .addChoices(
+                            { name: 'Anti', value: 'Anti' },
+                            { name: 'Freestyle', value: 'Freestyle' },
+                            { name: 'Masse', value: 'Masse' }
+                        )))
         .addSubcommand(subcommand =>
             subcommand
                 .setName('remove')
@@ -188,6 +197,7 @@ client.on('interactionCreate', async interaction => {
         
         else if (subcommand === 'add') {
             const user = interaction.options.getUser('user');
+            const role = interaction.options.getString('role');
             const channelId = interaction.channelId;
             
             // Finde den letzten Fight in diesem Channel
@@ -244,14 +254,14 @@ client.on('interactionCreate', async interaction => {
                 });
             }
             
-            // Füge User hinzu
-            targetFight.participants.push({ id: user.id, tag: user.tag });
+            // Füge User mit Role hinzu
+            targetFight.participants.push({ id: user.id, tag: user.tag, role: role });
             
             // Update die Nachricht
             await updateFightMessage(interaction.channel, targetMessageId, targetFight);
             
             await interaction.reply({ 
-                content: `✅ ${user} wurde zum Fight hinzugefügt!`, 
+                content: `✅ ${user} wurde als **${role}** zum Fight hinzugefügt!`, 
                 flags: MessageFlags.Ephemeral 
             });
         }
@@ -482,9 +492,39 @@ async function updateFightMessage(channel, messageId, fightData) {
         const message = await channel.messages.fetch(messageId);
         const creator = await client.users.fetch(fightData.creator);
         
-        const participantsList = fightData.participants.length > 0
-            ? fightData.participants.map((p, i) => `${i + 1}. <@${p.id}>`).join('\n')
-            : '*Noch keine Teilnehmer*';
+        let participantsList = '*Noch keine Teilnehmer*';
+        
+        if (fightData.participants.length > 0) {
+            // Gruppiere Teilnehmer nach Rolle
+            const roleGroups = {
+                'Masse': [],
+                'Anti': [],
+                'Freestyle': []
+            };
+            
+            fightData.participants.forEach(p => {
+                if (roleGroups[p.role]) {
+                    roleGroups[p.role].push(p);
+                }
+            });
+            
+            // Erstelle formatierte Liste
+            const sections = [];
+            
+            if (roleGroups['Masse'].length > 0) {
+                sections.push(`**Masse:**\n${roleGroups['Masse'].map(p => `<@${p.id}>`).join('\n')}`);
+            }
+            
+            if (roleGroups['Anti'].length > 0) {
+                sections.push(`**Anti:**\n${roleGroups['Anti'].map(p => `<@${p.id}>`).join('\n')}`);
+            }
+            
+            if (roleGroups['Freestyle'].length > 0) {
+                sections.push(`**Freestyle:**\n${roleGroups['Freestyle'].map(p => `<@${p.id}>`).join('\n')}`);
+            }
+            
+            participantsList = sections.join('\n\n');
+        }
         
         const embed = {
             color: fightData.participants.length >= fightData.slots ? 0x00ff00 : 0xff0000,

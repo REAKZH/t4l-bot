@@ -1,7 +1,7 @@
 {
   "name": "t4l-bot",
   "runtime": "nodejs",
-  "start": "node bot.js",
+  "start": "node index.js",
   "build": "npm install",
   "environment": {
     "NODE_ENV": "production"
