@@ -25,10 +25,10 @@ const commands = [
         .setDescription('Fight Management')
         .addSubcommand(subcommand =>
             subcommand
-                .setName('slots')
+                .setName('create')
                 .setDescription('Erstelle einen neuen Fight')
                 .addIntegerOption(option =>
-                    option.setName('anzahl')
+                    option.setName('slots')
                         .setDescription('Anzahl der verfügbaren Slots')
                         .setRequired(true)
                         .setMinValue(1)
@@ -79,7 +79,7 @@ client.once('ready', async () => {
     console.log(`📊 In ${client.guilds.cache.size} Server(n)`);
     
     // Setze den Bot-Status
-    client.user.setActivity('/fight slots zum Starten', { type: 'WATCHING' });
+    client.user.setActivity('/fight create zum Starten', { type: 'WATCHING' });
     
     // Registriere Slash Commands
     const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -125,8 +125,8 @@ client.on('interactionCreate', async interaction => {
             });
         }
         
-        if (subcommand === 'slots') {
-            const slots = interaction.options.getInteger('anzahl');
+        if (subcommand === 'create') {
+            const slots = interaction.options.getInteger('slots');
             
             // Erstelle Fight-Daten
             const fightData = {
@@ -464,18 +464,6 @@ client.login(process.env.DISCORD_TOKEN)
         console.error('❌ Fehler beim Login:', error);
         process.exit(1);
     });
-
-// Verbesserte Fehlerbehandlung
-process.on('unhandledRejection', (error) => {
-    console.error('❌ Unhandled Promise Rejection:', error);
-    // Bot läuft weiter, crasht nicht
-});
-
-process.on('uncaughtException', (error) => {
-    console.error('❌ Uncaught Exception:', error);
-    // Neustart bei kritischem Fehler
-    process.exit(1);
-});
 
 // Graceful Shutdown
 process.on('SIGINT', () => {
